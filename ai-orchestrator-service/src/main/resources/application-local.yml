@@ -1,0 +1,40 @@
+# Local development overrides — docker-compose provides all dependencies
+spring:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+
+  flyway:
+    enabled: false
+
+  # Disable auto-configurations not needed locally
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+      - io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration
+      - org.springframework.ai.autoconfigure.azure.openai.AzureOpenAiAutoConfiguration
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}   # set locally; empty key returns mock errors
+
+logging:
+  level:
+    com.enterprise: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    openAi:
+      enabled: false
+
+app:
+  rag:
+    enabled: false
+  memory:
+    ttl-hours: 1

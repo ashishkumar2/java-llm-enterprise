@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: gateway-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  config:
+    import: "optional:configserver:"
+  # Cloud Configuration
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+    gateway:
+      routes:
+        - id: ai-orchestrator
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - RewritePath=/api/ai(?<segment>/?.*), $\{segment}
+            - AuthFilter
+            - RateLimitFilter
+        
+        - id: ingestion
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/ingest/**
+          filters:
+            - RewritePath=/api/ingest(?<segment>/?.*), $\{segment}
+            - AuthFilter
+            - RateLimitFilter
+      
+      # X-Request-ID is injected dynamically by RequestIdFilter (a GlobalFilter)
+  
+  # Redis Configuration
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2000ms
+    
+  # Security
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER:http://auth-server}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-server/.well-known/jwks.json}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+# Actuator & Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  
+  # OpenTelemetry
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
+
+# Logging
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.enterprise: ${LOGGING_LEVEL_COM_ENTERPRISE:DEBUG}
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/gateway.log
+
+# Application-specific properties
+app:
+  jwt:
+    secret: ${JWT_SECRET:your-secret-key}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:24}
+  
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    per-minute: ${RATE_LIMIT_PER_MINUTE:60}
+    per-hour: ${RATE_LIMIT_PER_HOUR:1000}

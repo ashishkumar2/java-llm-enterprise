@@ -1,0 +1,29 @@
+# Local development overrides
+spring:
+  autoconfigure:
+    exclude:
+      - io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+
+  batch:
+    job:
+      enabled: false  # don't auto-run batch jobs on startup in local dev
+
+logging:
+  level:
+    com.enterprise: DEBUG
+    org.hibernate.SQL: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

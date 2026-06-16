@@ -1,0 +1,127 @@
+spring:
+  application:
+    name: ingestion-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  
+  # Database Configuration
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/llm_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+  
+  # Redis Configuration
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  
+  # Servlet Configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  
+  # Batch Configuration
+  batch:
+    job:
+      enabled: true
+    jdbc:
+      initialize-database: always
+
+  # Spring AI Configuration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-3-small}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8082}
+  servlet:
+    context-path: /
+
+# Actuator & Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  
+  # OpenTelemetry
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
+
+# Logging
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.enterprise: ${LOGGING_LEVEL_COM_ENTERPRISE:DEBUG}
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/ingestion.log
+
+# Application-specific properties
+app:
+  ingestion:
+    max-file-size-mb: 50
+    supported-formats: pdf,docx,txt,md
+    temp-dir: /tmp/ingestion
+  
+  chunking:
+    strategy: semantic
+    chunk-size: 800
+    chunk-overlap: 200
+    min-chunk-size: 100
+  
+  batch:
+    chunk-size: 100
+    threads: 5
+  
+  embedding:
+    batch-size: 100
+    retry-max-attempts: 3
+    retry-delay-millis: 1000
+  
+  kafka:
+    topics:
+      document-ingested: document-ingested
+      embedding-completed: embedding-completed
+      ingestion-failed: ingestion-failed

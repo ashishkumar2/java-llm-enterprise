@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose*)",
+      "Bash(docker ps*)",
+      "Bash(docker logs*)",
+      "Bash(curl*localhost*)",
+      "Bash(mvn*)",
+      "Bash(JAVA_HOME=* mvn*)",
+      "Bash(SPRING_PROFILES_ACTIVE=* mvn*)",
+      "Bash(echo*PID*)"
+    ]
+  }
+}

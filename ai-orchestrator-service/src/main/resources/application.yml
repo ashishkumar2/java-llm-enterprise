@@ -1,0 +1,156 @@
+spring:
+  application:
+    name: ai-orchestrator-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  
+  # Database Configuration
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/llm_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        enable_lazy_load_no_trans: true
+  
+  # Redis Configuration
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2000ms
+    jedis:
+      pool:
+        max-active: 20
+        max-idle: 10
+        min-idle: 5
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ai-orchestrator-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+  
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+  
+  # Security
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER:http://auth-server}
+
+  # Spring AI Configuration
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4}
+      chat:
+        options:
+          temperature: 0.7
+          max-tokens: 2000
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-3-small}
+
+    azure:
+      openai:
+        api-key: ${AZURE_OPENAI_KEY:}
+        endpoint: ${AZURE_OPENAI_ENDPOINT:}
+        deployment-name: ${AZURE_OPENAI_DEPLOYMENT_ID:gpt-4}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /
+
+# Actuator & Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  
+  # OpenTelemetry
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
+
+# Logging
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.enterprise: ${LOGGING_LEVEL_COM_ENTERPRISE:DEBUG}
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/ai-orchestrator.log
+
+# Application-specific properties
+app:
+  jwt:
+    secret: ${JWT_SECRET:your-secret-key}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:24}
+  
+  rag:
+    chunk-size: 800
+    chunk-overlap: 200
+    top-k: 5
+    re-ranking-enabled: true
+  
+  embedding:
+    cache-ttl-hours: 24
+    batch-size: 100
+  
+  ai:
+    max-tokens: 2000
+    temperature: 0.7
+    retry-max-attempts: 3
+    retry-delay-millis: 1000
+  
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    per-minute: ${RATE_LIMIT_PER_MINUTE:60}

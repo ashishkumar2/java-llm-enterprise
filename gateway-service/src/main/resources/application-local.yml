@@ -1,0 +1,9 @@
+spring:
+  autoconfigure:
+    exclude:
+      - io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration
+
+eureka:
+  client:
+    enabled: false
