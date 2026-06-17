@@ -2,6 +2,7 @@
 
 > Production-grade AI backend platform — RAG chat, async document ingestion, and enterprise security — built with Java 21, Spring Boot 3, and OpenAI.
 
+[![CI](https://github.com/ashishkumar2/java-llm-enterprise/actions/workflows/ci.yml/badge.svg)](https://github.com/ashishkumar2/java-llm-enterprise/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring AI](https://img.shields.io/badge/Spring_AI-0.8-6DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-ai)
@@ -146,7 +147,7 @@ java-llm-enterprise/
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/AKBasani/java-llm-enterprise.git
+git clone https://github.com/ashishkumar2/java-llm-enterprise.git
 cd java-llm-enterprise
 
 cp .env.example .env
@@ -383,4 +384,4 @@ This project was built to showcase:
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Built as a portfolio project by [Ashish Basani](https://github.com/AKBasani).
+MIT — see [LICENSE](LICENSE). Built as a portfolio project by [Ashish Basani](https://github.com/ashishkumar2).
