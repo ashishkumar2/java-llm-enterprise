@@ -1,10 +1,11 @@
-name: CI
-
-on:
+"on":
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+name: CI
 
 jobs:
   build:
@@ -20,8 +21,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build and test
-        run: mvn clean verify -DskipTests=false --no-transfer-progress
+      - name: Build (skip tests)
+        run: mvn clean package -DskipTests --no-transfer-progress
+
+      - name: Unit tests
+        run: mvn test --no-transfer-progress
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Upload coverage report
         if: always()
