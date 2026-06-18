@@ -1,14 +1,18 @@
 package com.enterprise.llm.ingestion.api;
 
+import com.enterprise.llm.common.exception.ResourceNotFoundException;
 import com.enterprise.llm.ingestion.model.Document;
 import com.enterprise.llm.ingestion.model.IngestionResponse;
 import com.enterprise.llm.ingestion.repository.DocumentRepository;
 import com.enterprise.llm.ingestion.service.DocumentIngestionService;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,6 +63,14 @@ public class IngestionController {
         ingestionService.ingest(doc.getId(), file.getBytes());
 
         return ResponseEntity.accepted().body(IngestionResponse.accepted(doc.getId(), doc.getFilename()));
+    }
+
+    @GetMapping("/{documentId}")
+    public ResponseEntity<IngestionResponse> status(@PathVariable UUID documentId) {
+        Document doc = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId));
+        return ResponseEntity.ok(new IngestionResponse(
+                doc.getId(), doc.getFilename(), doc.getStatus().name(), doc.getErrorMessage()));
     }
 
     private String getExtension(String filename) {

@@ -88,8 +88,7 @@ htmlcov/
 .aws/credentials
 .aws/config
 
-# Docker
-.dockerignore
+# Docker build artifacts (not .dockerignore itself — that belongs in source control)
 
 # Kubernetes
 kubeconfig

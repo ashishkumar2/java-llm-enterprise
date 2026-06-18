@@ -136,6 +136,7 @@ app:
     expiration-hours: ${JWT_EXPIRATION_HOURS:24}
   
   rag:
+    enabled: ${FEATURE_RAG_ENABLED:true}
     chunk-size: 800
     chunk-overlap: 200
     top-k: 5

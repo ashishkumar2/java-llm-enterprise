@@ -18,7 +18,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.xml.sax.SAXException;
 
 @Service
@@ -64,8 +63,9 @@ public class DocumentIngestionService {
             // 4. Persist chunks + embeddings to pgvector
             persistChunks(documentId, chunks, embeddings);
 
-            // 5. Mark document as completed
-            updateStatus(documentId, "COMPLETED", null);
+            // 5. Mark document as completed and persist via JPA
+            doc.markCompleted();
+            documentRepository.save(doc);
 
             // 6. Publish Kafka event for downstream consumers
             kafkaTemplate.send("document-ingested", documentId.toString(),
@@ -75,7 +75,8 @@ public class DocumentIngestionService {
 
         } catch (Exception e) {
             logger.error("Ingestion failed: documentId={}", documentId, e);
-            updateStatus(documentId, "FAILED", e.getMessage());
+            doc.markFailed(e.getMessage());
+            documentRepository.save(doc);
             kafkaTemplate.send("ingestion-failed", documentId.toString(),
                     new IngestionFailedEvent(documentId, doc.getFilename(), e.getMessage()));
         }
@@ -100,14 +101,6 @@ public class DocumentIngestionService {
                     documentId, i, chunks.get(i), vectorLiteral
             );
         }
-    }
-
-    @Transactional
-    void updateStatus(UUID documentId, String status, String error) {
-        jdbcTemplate.update(
-                "UPDATE documents SET status = ?, error_message = ?, updated_at = NOW() WHERE id = ?",
-                status, error, documentId
-        );
     }
 
     private String toVectorLiteral(List<Double> embedding) {

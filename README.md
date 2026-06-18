@@ -116,23 +116,24 @@ POST /api/ingest  (multipart file, up to 50 MB)
 
 ```
 enterprise-rag-platform/
-├── common-library/          # Shared DTOs, exceptions, MDC logging filter
-├── gateway-service/         # Reactive API gateway (auth, rate limiting, routing)
-├── ai-orchestrator-service/ # RAG chat engine (Spring AI, LangChain4j, pgvector)
-├── ingestion-service/       # Document pipeline (Tika, chunking, embeddings, Kafka)
+├── common-library/                # Shared DTOs, exceptions, MDC logging filter
+├── gateway-service/               # Reactive API gateway (auth, rate limiting, routing)
+│   └── Dockerfile                 # Multi-stage JDK21→JRE21 image
+├── ai-orchestrator-service/       # RAG chat engine (Spring AI, pgvector, Redis)
+│   └── Dockerfile
+├── ingestion-service/             # Document pipeline (Tika, chunking, embeddings, Kafka)
+│   └── Dockerfile
 ├── infrastructure/
-│   ├── docker/              # Service Dockerfiles
-│   ├── kubernetes/          # K8s manifests
-│   ├── terraform/           # AWS infrastructure (ECS, RDS, ElastiCache, MSK, VPC)
-│   └── monitoring/          # Prometheus + OTel configs
-├── docs/                    # Architecture, API contracts, runbooks, sequence diagrams
-├── prompts/                 # Reusable AI prompt templates (RAG, API gen, testing)
-├── ai-evaluation/           # RAGAS / DeepEval benchmark scaffolding
-├── docker-compose.yml       # Full local stack (12 services)
-├── CLAUDE.md                # Claude Code project intelligence
-├── ARCHITECTURE.md          # System design deep-dive
-├── CODING_STANDARDS.md      # Code style & patterns
-└── AGENTS.md                # AI-assisted coding rules
+│   ├── kubernetes/                # K8s deployment notes
+│   ├── terraform/                 # AWS IaC notes (ECS, RDS, ElastiCache, MSK)
+│   └── monitoring/                # Prometheus + OTel Collector configs
+├── docs/runbooks/                 # Deployment and incident-response runbooks
+├── prompts/                       # Reusable AI prompt templates for dev workflows
+├── docker-compose.yml             # Full local stack (12 services)
+├── .dockerignore
+├── start.sh / start.bat           # One-command local startup scripts
+├── CLAUDE.md                      # Claude Code project intelligence
+└── ARCHITECTURE.md                # System design, data flows, design decisions
 ```
 
 ---
@@ -220,17 +221,19 @@ curl http://localhost:8082/actuator/health
 
 ## API reference
 
-### Chat API (`ai-orchestrator-service`)
+All requests go through the gateway at `:8080` with `Authorization: Bearer <JWT>`.
+
+### Chat API
 
 ```
 POST /api/ai/chat
 Content-Type: application/json
 
 {
-  "message":   "string — user message",
+  "message":   "string — user message (max 5000 chars)",
   "sessionId": "string — conversation session ID",
-  "userId":    "string — optional, for audit",
-  "context":   "string — optional extra context"
+  "userId":    "string — caller identity",
+  "context":   "string — optional extra context (max 5000 chars)"
 }
 
 Response 200:
@@ -241,9 +244,17 @@ Response 200:
   "tokenCount": 342,
   "createdAt":  "2026-06-16T10:30:00Z"
 }
+
+GET /api/ai/chat/history/{sessionId}
+
+Response 200:
+[
+  {"role": "user",      "content": "What is pgvector?"},
+  {"role": "assistant", "content": "pgvector is a PostgreSQL extension..."}
+]
 ```
 
-### Ingestion API (`ingestion-service`)
+### Ingestion API
 
 ```
 POST /api/ingest
@@ -255,7 +266,18 @@ Response 202 Accepted:
 {
   "documentId": "uuid",
   "status":     "PROCESSING",
-  "filename":   "document.pdf"
+  "filename":   "document.pdf",
+  "message":    "Document accepted and queued for ingestion"
+}
+
+GET /api/ingest/{documentId}     — poll async status
+
+Response 200:
+{
+  "documentId":   "uuid",
+  "filename":     "document.pdf",
+  "status":       "COMPLETED",   -- PROCESSING | COMPLETED | FAILED
+  "message":      null           -- error detail if FAILED
 }
 ```
 

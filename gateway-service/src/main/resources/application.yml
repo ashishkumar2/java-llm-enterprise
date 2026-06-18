@@ -14,20 +14,20 @@ spring:
     gateway:
       routes:
         - id: ai-orchestrator
-          uri: http://localhost:8081
+          uri: ${AI_ORCHESTRATOR_URL:http://localhost:8081}
           predicates:
             - Path=/api/ai/**
           filters:
-            - RewritePath=/api/ai(?<segment>/?.*), $\{segment}
+            # /api/ai/chat → /api/chat (strips the /ai prefix, keeps /api)
+            - RewritePath=/api/ai/(?<segment>.*), /api/$\{segment}
             - AuthFilter
             - RateLimitFilter
-        
+
         - id: ingestion
-          uri: http://localhost:8082
+          uri: ${INGESTION_URL:http://localhost:8082}
           predicates:
-            - Path=/api/ingest/**
+            - Path=/api/ingest,/api/ingest/**
           filters:
-            - RewritePath=/api/ingest(?<segment>/?.*), $\{segment}
             - AuthFilter
             - RateLimitFilter
       

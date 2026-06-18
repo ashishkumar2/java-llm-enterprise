@@ -51,6 +51,21 @@ public class ConversationMemoryService {
                 .collect(Collectors.toList());
     }
 
+    public List<StoredMessage> getStoredHistory(String sessionId) {
+        String key = KEY_PREFIX + sessionId;
+        List<String> raw = redisTemplate.opsForList().range(key, 0, -1);
+        if (raw == null || raw.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return raw.stream()
+                .map(json -> {
+                    try { return objectMapper.readValue(json, StoredMessage.class); }
+                    catch (JsonProcessingException e) { return null; }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     public void save(String sessionId, String role, String content) {
         String key = KEY_PREFIX + sessionId;
         try {

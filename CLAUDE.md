@@ -50,12 +50,14 @@ Start order: infrastructure → orchestrator + ingestion (parallel) → gateway.
 ## Infrastructure (docker-compose)
 
 ```bash
-docker-compose up -d          # start all
-docker-compose up -d postgres redis kafka  # minimal set for dev
+docker-compose up -d          # start all (infra + 3 app services)
+docker-compose up -d postgres redis zookeeper kafka  # infra only for local dev
 docker-compose logs -f kafka  # tail a specific service
 ```
 
-Services: `postgres` (pgvector), `redis`, `zookeeper`, `kafka`, `prometheus`, `grafana` (:3000), `otel-collector`, `jaeger` (:16686), `pgadmin` (:5050).
+Services: `postgres` (pgvector), `redis`, `zookeeper`, `kafka`, `prometheus`, `grafana` (:3000), `otel-collector`, `jaeger` (:16686), `pgadmin` (:5050), `ai-orchestrator`, `ingestion`, `gateway`.
+
+**Docker builds** — all 3 app services have multi-stage Dockerfiles (`eclipse-temurin:21-jdk-alpine` build → `eclipse-temurin:21-jre-alpine` runtime). Build context is the project root. Gateway needs `AI_ORCHESTRATOR_URL` and `INGESTION_URL` env vars (set automatically in docker-compose).
 
 ## Environment configuration
 
@@ -82,12 +84,15 @@ ingestion-service/       Servlet stack, JPA, Apache Tika, async Kafka producer
 | File | What it does |
 |------|-------------|
 | `ai-orchestrator-service/.../service/DefaultChatService.java` | Core RAG loop: Redis history → pgvector context → OpenAI → persist |
-| `ai-orchestrator-service/.../service/RagContextService.java` | pgvector similarity search |
-| `ai-orchestrator-service/.../service/ConversationMemoryService.java` | Redis session storage |
+| `ai-orchestrator-service/.../service/RagContextService.java` | pgvector cosine similarity search (configurable top-K) |
+| `ai-orchestrator-service/.../service/ConversationMemoryService.java` | Redis session storage + `getStoredHistory()` for API |
+| `ai-orchestrator-service/.../api/ChatController.java` | `POST /api/chat` and `GET /api/chat/history/{sessionId}` |
 | `ingestion-service/.../service/DocumentIngestionService.java` | Async pipeline: Tika → chunk → embed → pgvector → Kafka |
-| `ingestion-service/.../service/EmbeddingService.java` | OpenAI text-embedding-3-small, batch 100 |
-| `gateway-service/.../filter/AuthFilterGatewayFilterFactory.java` | JWT validation |
-| `gateway-service/.../filter/RateLimitFilterGatewayFilterFactory.java` | Redis rate limiting |
+| `ingestion-service/.../service/ChunkingService.java` | 800/200 sliding window with sentence/paragraph boundary detection |
+| `ingestion-service/.../service/EmbeddingService.java` | OpenAI text-embedding-3-small, batch 100, retry 3× |
+| `ingestion-service/.../api/IngestionController.java` | `POST /api/ingest` and `GET /api/ingest/{documentId}` |
+| `gateway-service/.../filter/AuthFilterGatewayFilterFactory.java` | JWT validation, X-User-ID propagation |
+| `gateway-service/.../filter/RateLimitFilterGatewayFilterFactory.java` | Redis sliding-window rate limiting |
 
 ## Architecture patterns
 
@@ -124,8 +129,20 @@ mvn test -pl ai-orchestrator-service  # single module
 1. Register extension in `IngestionController` allowed-types list
 2. Apache Tika handles parsing automatically for most formats
 
+**Poll document ingestion status:**
+```bash
+curl http://localhost:8080/api/ingest/{documentId} -H "Authorization: Bearer $TOKEN"
+# returns {status: "PROCESSING"|"COMPLETED"|"FAILED"}
+```
+
+**Retrieve conversation history:**
+```bash
+curl http://localhost:8080/api/ai/chat/history/{sessionId} -H "Authorization: Bearer $TOKEN"
+# returns [{role, content}, ...]
+```
+
 **Extend conversation memory:**
-- `ConversationMemoryService` uses Redis LRANGE/RPUSH; TTL is 1 hour (configurable via `CACHE_TTL` env var)
+- `ConversationMemoryService` uses Redis LRANGE/RPUSH; TTL configurable via `app.memory.ttl-hours` (default 24h); sliding window configurable via `app.memory.max-messages` (default 20)
 
 **Change LLM model:**
 - Set `OPENAI_MODEL` in `.env` (default: `gpt-4`)
